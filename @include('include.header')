@@ -1,0 +1,177 @@
+@include('include.header')
+		<!--begin::Entry-->
+	<div class="d-flex flex-column-fluid">
+		<!--begin::Container-->
+		<div class=" container ">
+			<!-- begin::Card-->
+<div class="card card-custom overflow-hidden">
+    <div class="card-body p-0">
+        <!-- begin: Invoice-->
+        <!-- begin: Invoice header-->
+        <div class="row justify-content-center py-8 px-8 py-md-27 px-md-0">
+            <div class="col-md-9">
+                <div class="d-flex justify-content-between pb-10 pb-md-20 flex-column flex-md-row">
+                    <h1 class="display-4 font-weight-boldest mb-10">Status: <span class="text-danger">INACTIVE</span></h1>
+                    <div class="d-flex flex-column align-items-md-end px-0">
+                        <!--begin::Logo-->
+                        <!--<a href="#" class="mb-5">-->
+                        <!--    <img src="{{ asset('assets/avatar/logo.png')}}" width="50" alt=""/>-->
+                        <!--</a>-->
+                        <!--end::Logo-->
+                        <span class=" d-flex flex-column align-items-md-end opacity-70">
+                            <span>{{$settings->site_name}}</span>
+                            <span>{{$settings->contact_email}}</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="border-bottom w-100"></div>
+                <div class="d-flex justify-content-between pt-6">
+                    <div class="d-flex flex-column flex-root">
+                        <span class="font-weight-bolder mb-2">Date Registered</span>
+                        <span class="opacity-70">{{Auth::user()->created_at}}{{@ Carbon\Carbon::parse($time)->diffForHumans() }}</span>
+                    </div>
+                    <div class="d-flex flex-column flex-root">
+                        <span class="font-weight-bolder mb-2">Time Registered.</span>
+                        <span class="opacity-70">{{@ Carbon\Carbon::parse(Auth::user()->created_at)->diffForHumans() }}</span>
+                    </div>
+                    <div class="d-flex flex-column flex-root">
+                        <span class="font-weight-bolder mb-2">Account Holder.</span>
+                        <span class="opacity-70">{{Auth::user()->name}} {{Auth::user()->l_name}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @php $plans = App\Regplan::whereStatus(1)->get(); @endphp
+        @php $gateway = App\gateways::whereVal6(1)->whereStatus(1)->get(); @endphp
+        @if(Auth::user()->start != 1)
+         <!-- begin: Invoice body-->
+        <div class="row justify-content-center py-8 px-8 py-md-10 px-md-0">
+            <div class="col-md-9">
+                <h2 align="center">Membership Fee</h2>
+               <p align="center">Before you can make deposits or join any of the savings plan, you have to register as a member of Numero Housing Cooperative Society.</p>
+                <p align="center">To become a member of Numero Housing Cooperative Society, you are to pay the sum of &#8358; {{ number_format(5000) }} for a membership fee, after that you get unlimited access to become a part of us.</p>
+                <form class="form" method="POST" novalidate="novalidate" id="kt_login_signin_form"  >
+                {{csrf_field()}}
+               <div class="form-group">
+                 <select name="plan" class="form-control">
+                     <option selected disabled>Please Select A Plan</option>
+                     @foreach($plans as $data)
+                     <option value="{{$data->id}}">{{$data->name}} ( {{$settings->currency}}{{number_format($data->amount,2)}} )</option>
+                     @endforeach
+                 </select>  
+                 <br>
+                  <div class="form-group">
+                 <select name="gateway" class="form-control">
+                     <option selected disabled>Please Payment Gateway</option>
+                     @foreach($gateway as $data)
+                     <option value="{{$data->id}}">{{$data->name}}</option>
+                     @endforeach
+                 </select>  
+                 <br>
+                 
+                  <div class="form-group">
+                      <button type="submit" class="btn btn-success btn-sm">Proceed</button>
+                  </div>
+                  </form>
+                   
+               </div>
+            </div>
+        </div>
+        <!-- end: Invoice body-->
+        @endif
+        <!-- end: Invoice header-->
+        @if(session()->get('gateway') == 100)
+ @push('script')       
+        <script>
+      FlutterwaveCheckout({
+      public_key: "{{session()->get('key')}}",
+      tx_ref: "{{session()->get('trx')}}",
+      amount: "{{session()->get('amount')}}",
+      currency: "NGN",
+      country: "NG",
+      payment_options: " ",
+      redirect_url: // specified redirect URL
+        "{{ url('/')}}/raisefundfromflutterwave",
+      meta: {
+        consumer_id: 23,
+        consumer_mac: "92a3-912ba-1192a",
+      },
+      customer: {
+        email: "{{Auth::user()->email}}",
+        phone_number: "{{Auth::user()->phone}}",
+        name: "{{Auth::user()->username}}",
+      },
+      callback: function (data) {
+        //console.log(data);
+      //var paid = "{{ url('/')}}/pay/raisefundfromflutterwave/"+console.log(data);
+      //window.location = paid;
+      },
+      onclose: function() {
+       var url = "{{route('stopsession')}}";
+           window.location = url;
+      },
+      customizations: {
+        title: "{{Auth::user()->email}}",
+        description: "{{Auth::user()->email}}",
+        logo: "",
+      },
+    });
+
+</script>
+@endpush
+@endif
+        @if(session()->get('gateway') == '107')
+
+   @push('script')
+
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+        <script>
+  //function payWithPaystack(){
+      var handler = PaystackPop.setup({
+      key: "{{session()->get('key')}}",
+      email: "{{Auth::user()->email}}",
+      amount: "{{session()->get('amount')*100}}",
+      currency: "NGN",
+      ref: ''+Math.floor((Math.random() * 1000000000) + 1), // generates a pseudo-unique reference. Please replace with a reference you generated. Or remove the line entirely so our API will generate one for you
+      metadata: {
+         custom_fields: [
+            {
+                display_name: "Mobile Number",
+                variable_name: "mobile_number",
+                value: "+2348012345678"
+            }
+         ]
+      },
+      callback: function(response){
+          //alert('success. transaction ref is ' + response.reference);
+          var paid = "{{ url('/')}}/pay/planpaystack/"+response.reference;
+          window.location = paid;
+      },
+      onClose: function(){
+      var url = "{{route('stopsession')}}";
+           window.location = url;
+      }
+    });
+    handler.openIframe();
+ // }
+</script>
+@endpush
+        @endif
+
+        
+
+        
+
+        <!-- end: Invoice-->
+    </div>
+</div>
+<!-- end::Card-->
+		</div>
+		<!--end::Container-->
+	</div>
+<!--end::Entry-->
+				</div>
+				<!--end::Content-->
+			
+	@include('include.footer')
+	
